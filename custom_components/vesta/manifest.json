@@ -1,0 +1,15 @@
+{
+  "domain": "vesta",
+  "name": "VESTA Alarm Panel",
+  "codeowners": ["@maxime"],
+  "version": "1.0.0",
+  "documentation": "https://github.com/maxime/ha-vesta",
+  "issue_tracker": "https://github.com/maxime/ha-vesta/issues",
+  "iot_class": "cloud_push",
+  "requirements": [
+    "python-socketio[asyncio_client]>=5.10.0",
+    "pydantic>=2.5.0"
+  ],
+  "config_flow": true,
+  "integration_type": "hub"
+}
