@@ -1,10 +1,12 @@
 {
-  "domain": "smarthomesec",
-  "name": "SmartHomeSec integration",
+  "domain": "vesta_local",
+  "name": "Vesta/Climax Local",
+  "codeowners": ["@mphel44"],
   "config_flow": true,
-  "codeowners": ["@koying"],
   "dependencies": [],
-  "iot_class": "cloud_push",
-  "requirements": [],
-  "version": "2024.5.1"
+  "documentation": "https://github.com/mphel44/vesta-local-ha",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/mphel44/vesta-local-ha/issues",
+  "requirements": ["pydantic>=2.0.0"],
+  "version": "1.0.0"
 }

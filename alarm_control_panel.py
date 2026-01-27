@@ -1,108 +1,137 @@
-"""Support for Smarthomesec System alarm control panels."""
-
+"""Alarm Control Panel for Vesta/Climax Local integration."""
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
-    CodeFormat,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONF_NAME,
-)
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
-
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.core import callback
 
-from .const import DOMAIN
-from . import SmarthomesecCoordinator
+from .const import ALARM_MODE_TO_STATE, ALARM_STATE_TO_MODE, DOMAIN
+from .entity import VestaPanelEntity
+
+if TYPE_CHECKING:
+    from . import VestaConfigEntry
+    from .coordinator import VestaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    entry: VestaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up an alarm control panel for a Smarthomesec device."""
-    coord = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
-    alarm_areas = hass.data[DOMAIN][config_entry.entry_id]["alarm_areas"]
+    """Set up Vesta alarm control panel from a config entry.
 
-    async_add_entities(
-        SmarthomesecAlarm(coord, area, config_entry) for area in alarm_areas
-    )
+    Args:
+        hass: The Home Assistant instance.
+        entry: The config entry.
+        async_add_entities: Callback to add entities.
+    """
+    coordinator = entry.runtime_data
 
-class SmarthomesecAlarm(CoordinatorEntity, AlarmControlPanelEntity):
-    """An alarm_control_panel implementation for Smarthomesec."""
+    # Create alarm control panel for area 1 (main panel)
+    async_add_entities([VestaAlarmControlPanel(coordinator, entry.entry_id)])
 
-    _attr_name = None
-    _attr_code_arm_required = True
-    _attr_code_format = CodeFormat.NUMBER
+    _LOGGER.debug("Alarm control panel entity added")
+
+
+class VestaAlarmControlPanel(VestaPanelEntity, AlarmControlPanelEntity):
+    """Alarm control panel entity for Vesta/Climax panels.
+
+    This entity provides arm/disarm/home functionality for the alarm panel.
+
+    Attributes:
+        _attr_name: The entity name shown in Home Assistant.
+        _attr_supported_features: The supported alarm features.
+    """
+
+    _attr_name = "Alarm"
     _attr_supported_features = (
         AlarmControlPanelEntityFeature.ARM_HOME
         | AlarmControlPanelEntityFeature.ARM_AWAY
+        | AlarmControlPanelEntityFeature.ARM_NIGHT
     )
 
     def __init__(
-        self, coord: SmarthomesecCoordinator, alarm, entry
+        self,
+        coordinator: VestaDataUpdateCoordinator,
+        entry_id: str,
+        area: int = 1,
     ) -> None:
-        """Initialize the SmarthomesecAlarm class."""
-        self._alarm = alarm
-        self.coord = coord
-        self.area = str(alarm["area"])
+        """Initialize the alarm control panel.
 
-        self._attr_name = f'{entry.data[CONF_NAME]} {self.area}'
-        self._attr_unique_id = f'smarthomesec_{entry.data[CONF_NAME]}_{self.area}'
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.data[CONF_NAME],
-            manufacturer="SmartHomeSec",
-        )
+        Args:
+            coordinator: The data update coordinator.
+            entry_id: The config entry ID.
+            area: The panel area. Default is 1.
+        """
+        super().__init__(coordinator, entry_id, area)
 
-        super().__init__(coord, context=self._attr_unique_id)
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self._alarm = self.coordinator.data["alarms"][self.area]
-        self.async_write_ha_state()
+        # Override unique ID for alarm panel
+        self._attr_unique_id = f"{entry_id}_alarm_area_{area}"
 
     @property
     def alarm_state(self) -> AlarmControlPanelState | None:
-        """Return the state of the device."""
-        if self._alarm["mode"] == "disarm":
-            return AlarmControlPanelState.DISARMED
-        elif self._alarm["mode"] == "arm":
-            return AlarmControlPanelState.ARMED_AWAY
-        elif self._alarm["mode"] == "home":
-            return AlarmControlPanelState.ARMED_HOME
-        elif self._alarm["mode"] == "triggered":
-            return AlarmControlPanelState.TRIGGERED
-        else:
+        """Return the current alarm state.
+
+        Returns:
+            The current AlarmControlPanelState or None if unknown.
+        """
+        if self.coordinator.data is None:
             return None
 
-    def alarm_arm_away(self, code: str | None = None) -> None:
-        """Send arm away command."""
-        _LOGGER.info("alarm_arm_away")
-        self.coord.set_alarm_mode(self.area, "arm", code)
+        mode = self.coordinator.data.panel.mode
+        state = ALARM_MODE_TO_STATE.get(mode)
 
-    def alarm_disarm(self, code: str | None = None) -> None:
-        """Send disarm command."""
-        _LOGGER.info("alarm_disarm")
-        self.coord.set_alarm_mode(self.area, "disarm", code)
+        if state is None:
+            _LOGGER.warning("Unknown alarm mode: %s", mode)
+            return None
 
-    def alarm_arm_home(self, code: str | None = None) -> None:
-        """Send arm home command."""
-        _LOGGER.info("alarm_arm_home")
-        self.coord.set_alarm_mode(self.area, "home", code)
+        return state
+
+    async def async_alarm_disarm(self, code: str | None = None) -> None:
+        """Send disarm command.
+
+        Args:
+            code: The disarm code (not used for local API).
+        """
+        _LOGGER.info("Disarming alarm (area %d)", self._area)
+        mode = ALARM_STATE_TO_MODE["disarm"]
+        await self.coordinator.async_set_alarm_mode(mode, self._area)
+
+    async def async_alarm_arm_home(self, code: str | None = None) -> None:
+        """Send arm home command.
+
+        Args:
+            code: The arm code (not used for local API).
+        """
+        _LOGGER.info("Arming alarm in home mode (area %d)", self._area)
+        mode = ALARM_STATE_TO_MODE["arm_home"]
+        await self.coordinator.async_set_alarm_mode(mode, self._area)
+
+    async def async_alarm_arm_away(self, code: str | None = None) -> None:
+        """Send arm away command.
+
+        Args:
+            code: The arm code (not used for local API).
+        """
+        _LOGGER.info("Arming alarm in away mode (area %d)", self._area)
+        mode = ALARM_STATE_TO_MODE["arm_away"]
+        await self.coordinator.async_set_alarm_mode(mode, self._area)
+
+    async def async_alarm_arm_night(self, code: str | None = None) -> None:
+        """Send arm night command.
+
+        Args:
+            code: The arm code (not used for local API).
+        """
+        _LOGGER.info("Arming alarm in night mode (area %d)", self._area)
+        mode = ALARM_STATE_TO_MODE["arm_night"]
+        await self.coordinator.async_set_alarm_mode(mode, self._area)

@@ -2,9 +2,23 @@
   "config": {
     "step": {
       "user": {
-        "title": "SmartHomeSec connection",
+        "title": "Vesta/Climax Local Connection",
+        "description": "Enter the connection details for your Vesta/Climax alarm panel.",
         "data": {
-          "name": "[%key:common::config_flow::data::name%]",
+          "host": "Host (IP address or hostname)",
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        },
+        "data_description": {
+          "host": "The IP address or hostname of your alarm panel (e.g., 192.168.1.100)",
+          "username": "The username for your alarm panel (usually 'admin')",
+          "password": "The password for your alarm panel"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Vesta/Climax Panel",
+        "description": "Authentication failed for {host}. Please enter your new credentials.",
+        "data": {
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]"
         }
@@ -12,20 +26,30 @@
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
     }
   },
-  "issues": {
-    "deprecated_yaml_import_issue_cannot_connect": {
-      "title": "The SmartHomeSec YAML configuration import failed",
-      "description": "Configuring SmartHomeSec using YAML is being removed but there was a connection error importing your YAML configuration.\n\nEnsure connection to Lupus Electronics LUPUSEC works and restart Home Assistant to try again or remove the Lupus Electronics LUPUSEC YAML configuration from your configuration.yaml file and continue to [set up the integration]({url}) manually."
+  "entity": {
+    "alarm_control_panel": {
+      "alarm": {
+        "name": "Alarm"
+      }
     },
-    "deprecated_yaml_import_issue_unknown": {
-      "title": "The SmartHomeSec YAML configuration import failed",
-      "description": "Configuring SmartHomeSec using YAML is being removed but there was an unknown error when trying to import the YAML configuration.\n\nEnsure the imported configuration is correct and remove the Lupus Electronics LUPUSEC YAML configuration from your configuration.yaml file and continue to [set up the integration]({url}) manually."
+    "sensor": {
+      "gsm_signal": {
+        "name": "GSM Signal"
+      },
+      "battery_status": {
+        "name": "Battery Status"
+      },
+      "ac_status": {
+        "name": "AC Power"
+      }
     }
   }
 }
