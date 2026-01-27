@@ -1,0 +1,11 @@
+{
+  "domain": "smarthomesec",
+  "name": "SmartHomeSec",
+  "codeowners": ["@koying"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/koying/smarthomesec",
+  "iot_class": "cloud_push",
+  "requirements": ["py_smarthomesec==0.1.0"],
+  "version": "2025.1.0"
+}

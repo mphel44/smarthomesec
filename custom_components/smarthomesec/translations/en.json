@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SmartHomeSec Connection",
+        "data": {
+          "name": "Name",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to SmartHomeSec server",
+      "invalid_auth": "Invalid username or password",
+      "unknown": "Unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "This account is already configured"
+    }
+  }
+}
